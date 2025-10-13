@@ -20,8 +20,12 @@ io.on("connection", (socket) => {
     const cleanUserId = userId.trim();
 
     const existing = users[cleanUserId];
-
+    
     if (existing && existing.socketId !== socket.id) return;
+
+    const existingUserId = Object.keys(users).find((key) => users[key].socketId === socket.id);
+
+    if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
 
     users[cleanUserId] = { socketId: socket.id, fcmToken };
 
