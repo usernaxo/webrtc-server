@@ -19,9 +19,9 @@ io.on("connection", (socket) => {
 
     const cleanUserId = userId.trim();
 
-    const existingUserId = Object.keys(users).find((key) => users[key].socketId === socket.id);
+    const existing = users[cleanUserId];
 
-    if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
+    if (existing && existing.socketId !== socket.id) return;
 
     users[cleanUserId] = { socketId: socket.id, fcmToken };
 
