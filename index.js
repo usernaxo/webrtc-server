@@ -12,16 +12,20 @@ const io = new Server(server, { cors: { origin: "*" } } );
 let users = {};
 
 io.on("connection", (socket) => {
-
+  
   socket.on("register", ({ userId, fcmToken }) => {
+
+    if (!userId || userId.trim() === "") return;
+
+    const cleanUserId = userId.trim();
 
     const existingUserId = Object.keys(users).find((key) => users[key].socketId === socket.id);
 
-    if (existingUserId && existingUserId !== userId) delete users[existingUserId];
+    if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
 
-    users[userId] = { socketId: socket.id, fcmToken };
+    users[cleanUserId] = { socketId: socket.id, fcmToken };
 
-    console.log("connected:", userId);
+    console.log("registered:", cleanUserId);
 
     io.emit("users", Object.keys(users));
 
