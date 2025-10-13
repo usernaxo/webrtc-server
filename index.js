@@ -15,6 +15,10 @@ io.on("connection", (socket) => {
 
   socket.on("register", ({ userId, fcmToken }) => {
 
+    const existingUserId = Object.keys(users).find((key) => users[key].socketId === socket.id);
+
+    if (existingUserId && existingUserId !== userId) delete users[existingUserId];
+
     users[userId] = { socketId: socket.id, fcmToken };
 
     console.log("connected:", userId);
@@ -101,9 +105,9 @@ io.on("connection", (socket) => {
 
     if (targetUser) {
 
-        const targetUserSocketId = targetUser.socketId;
+      const targetUserSocketId = targetUser.socketId;
 
-        io.to(targetUserSocketId).emit("ice-candidate", { candidate });
+      io.to(targetUserSocketId).emit("ice-candidate", { candidate });
 
     }
 
