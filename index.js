@@ -14,11 +14,6 @@ let users = {};
 let cityLookup;
 let asnLookup;
 
-(async () => {
-  cityLookup = await maxmind.open("./geolocation/GeoLite2-City.mmdb");
-  asnLookup = await maxmind.open("./geolocation/GeoLite2-ASN.mmdb");
-})();
-
 io.on("connection", (socket) => {
 
   socket.on("register", async ({ userId, fcmToken }) => {
@@ -200,4 +195,13 @@ io.on("connection", (socket) => {
 
 });
 
-server.listen(3000);
+async function startServer() {
+
+  cityLookup = await maxmind.open("./geolocation/GeoLite2-City.mmdb");
+  asnLookup = await maxmind.open("./geolocation/GeoLite2-ASN.mmdb");
+
+  server.listen(3000);
+
+}
+
+startServer();
