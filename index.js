@@ -35,7 +35,10 @@ io.on("connection", (socket) => {
 
     if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
   
-    const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || "Unknown";
+    const ip = socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim() 
+           || socket.handshake.address 
+           || "Unknown";
+
 
     const ua = (socket.handshake.headers['user-agent'] || "").toLowerCase();
 
