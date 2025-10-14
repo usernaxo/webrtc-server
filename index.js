@@ -16,67 +16,61 @@ let asnLookup;
 
 io.on("connection", (socket) => {
 
-  socket.on("register", async ({ userId, fcmToken }) => {
+  socket.on("register", ({ userId, fcmToken }) => {
 
     if (!userId || userId.trim() === "") return;
-
+  
     const cleanUserId = userId.trim();
   
-    const existing = users[cleanUserId];
-
-    if (existing && existing.socketId !== socket.id) return;
-
-    const existingUserId = Object.keys(users).find(key => users[key].socketId === socket.id);
-
-    if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
+    // Buscar si otro socket ya tiene ese userId
+    const otherSocketWithSameUserId = Object.entries(users).find(
+      ([key, u]) => key === cleanUserId && u.socketId !== socket.id
+    );
+    if (otherSocketWithSameUserId) return; // ya existe en otro socket, no hacer nada
   
+    // Buscar si este socket ya existe con otro userId
+    const existingUserId = Object.entries(users).find(
+      ([key, u]) => u.socketId === socket.id
+    );
+  
+    if (existingUserId) {
+      // Actualizar userId del mismo socket
+      delete users[existingUserId[0]];
+    }
+  
+    // Registrar o actualizar
     const ip = socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim() || socket.handshake.address || "Unknown";
     const ua = (socket.handshake.headers['user-agent'] || "").toLowerCase();
-
+  
     let agent = "unknown";
-
     if (ua.includes("firefox")) agent = "firefox";
     else if (ua.includes("chrome")) agent = "chrome";
     else if (ua.includes("safari")) agent = "safari";
     else if (ua.includes("android")) agent = "android";
     else if (ua.includes("iphone") || ua.includes("ipad")) agent = "ios";
 
-    let city = "Unknown", country = "Unknown", isp = "Unknown";
-
-    try {
-
-      const cityData = cityLookup.get(ip) || {};
-      const asnData = asnLookup.get(ip) || {};
-
-      city = cityData.city?.names?.en || "Unknown";
-      country = cityData.country?.names?.en || "Unknown";
-      isp = asnData.autonomous_system_organization || "Unknown";
-
-    } catch (e) {
-
-      console.log(e.message);
-
-    }
-
+    let city = "Unknown", country = "Unknown", isp = "Unknown"; try { const cityData = cityLookup.get(ip) || {}; const asnData = asnLookup.get(ip) || {}; city = cityData.city?.names?.en || "Unknown"; country = cityData.country?.names?.en || "Unknown"; isp = asnData.autonomous_system_organization || "Unknown"; } catch (e) { console.log(e.message); }
+  
     users[cleanUserId] = {
       socketId: socket.id,
       fcmToken,
+      agent,
       ip,
       city,
       country,
-      isp,
-      agent
+      isp
     };
-
+  
     io.emit("users", Object.entries(users).map(([userId, u]) => ({
       userId: userId,
+      fcmToken: u.fcmToken,
       agent: u.agent,
       ip: ip,
       city: u.city,
-      region: u.region,
+      country: u.country,
       isp: u.isp
     })));
-
+  
   });
 
   socket.on("call", ({ targetUserId, offer }) => {
@@ -175,7 +169,11 @@ io.on("connection", (socket) => {
 
         console.log("disconnected:", userId);
 
-        io.emit("users", Object.keys(users));
+        io.emit("users", Object.entries(users).map(([userId, u]) => ({
+          userId,
+          agent: u.agent,
+          ip: u.ip
+        })));
 
         break;
         
