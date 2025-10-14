@@ -30,11 +30,7 @@ io.on("connection", (socket) => {
 
     if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
   
-    const ip = socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim() 
-           || socket.handshake.address 
-           || "Unknown";
-
-
+    const ip = socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim() || socket.handshake.address || "Unknown";
     const ua = (socket.handshake.headers['user-agent'] || "").toLowerCase();
 
     let agent = "unknown";
@@ -45,7 +41,7 @@ io.on("connection", (socket) => {
     else if (ua.includes("android")) agent = "android";
     else if (ua.includes("iphone") || ua.includes("ipad")) agent = "ios";
 
-    let city = "Unknown", region = "Unknown", country = "Unknown", isp = "Unknown";
+    let city = "Unknown", country = "Unknown", isp = "Unknown";
 
     try {
 
@@ -53,7 +49,6 @@ io.on("connection", (socket) => {
       const asnData = asnLookup.get(ip) || {};
 
       city = cityData.city?.names?.en || "Unknown";
-      region = cityData.subdivisions?.[0]?.names?.en || "Unknown";
       country = cityData.country?.names?.en || "Unknown";
       isp = asnData.autonomous_system_organization || "Unknown";
 
@@ -68,20 +63,17 @@ io.on("connection", (socket) => {
       fcmToken,
       ip,
       city,
-      region,
       country,
       isp,
       agent
     };
-  
-    console.log("registered:", cleanUserId, agent, ip, city, region, country, isp);
 
-    io.emit("users", Object.values(users).map(u => ({
-      userId: cleanUserId,
+    io.emit("users", Object.entries(users).map(([userId, u]) => ({
+      userId: userId,
       agent: u.agent,
+      ip: ip,
       city: u.city,
       region: u.region,
-      country: u.country,
       isp: u.isp
     })));
 
