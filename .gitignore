@@ -1,9 +1,8 @@
-# Node modules
 node_modules/
 
-# Logs
 logs/
 *.log
 
-# OS archivos
 .DS_Store
+
+geolocation/*.mmdb

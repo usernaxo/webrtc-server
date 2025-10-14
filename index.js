@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
+import maxmind from "maxmind";
 
 const app = express();
 app.use(cors());
@@ -10,28 +11,81 @@ const server = createServer(app);
 const io = new Server(server, { cors: { origin: "*" } } );
 
 let users = {};
+let cityLookup;
+let asnLookup;
+
+(async () => {
+  cityLookup = await maxmind.open("./geolocation/GeoLite2-City.mmdb");
+  asnLookup = await maxmind.open("./geolocation/GeoLite2-ASN.mmdb");
+})();
 
 io.on("connection", (socket) => {
-  
-  socket.on("register", ({ userId, fcmToken }) => {
+
+  socket.on("register", async ({ userId, fcmToken }) => {
 
     if (!userId || userId.trim() === "") return;
 
     const cleanUserId = userId.trim();
-
+  
     const existing = users[cleanUserId];
-    
+
     if (existing && existing.socketId !== socket.id) return;
 
-    const existingUserId = Object.keys(users).find((key) => users[key].socketId === socket.id);
+    const existingUserId = Object.keys(users).find(key => users[key].socketId === socket.id);
 
     if (existingUserId && existingUserId !== cleanUserId) delete users[existingUserId];
+  
+    const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || "Unknown";
 
-    users[cleanUserId] = { socketId: socket.id, fcmToken };
+    const ua = (socket.handshake.headers['user-agent'] || "").toLowerCase();
 
-    console.log("registered:", cleanUserId);
+    let agent = "unknown";
 
-    io.emit("users", Object.keys(users));
+    if (ua.includes("firefox")) agent = "firefox";
+    else if (ua.includes("chrome")) agent = "chrome";
+    else if (ua.includes("safari")) agent = "safari";
+    else if (ua.includes("android")) agent = "android";
+    else if (ua.includes("iphone") || ua.includes("ipad")) agent = "ios";
+
+    let city = "Unknown", region = "Unknown", country = "Unknown", isp = "Unknown";
+
+    try {
+
+      const cityData = cityLookup.get(ip) || {};
+      const asnData = asnLookup.get(ip) || {};
+
+      city = cityData.city?.names?.en || "Unknown";
+      region = cityData.subdivisions?.[0]?.names?.en || "Unknown";
+      country = cityData.country?.names?.en || "Unknown";
+      isp = asnData.autonomous_system_organization || "Unknown";
+
+    } catch (e) {
+
+      console.log(e.message);
+
+    }
+
+    users[cleanUserId] = {
+      socketId: socket.id,
+      fcmToken,
+      ip,
+      city,
+      region,
+      country,
+      isp,
+      agent
+    };
+  
+    console.log("registered:", cleanUserId, agent, ip, city, region, country, isp);
+
+    io.emit("users", Object.values(users).map(u => ({
+      userId: cleanUserId,
+      agent: u.agent,
+      city: u.city,
+      region: u.region,
+      country: u.country,
+      isp: u.isp
+    })));
 
   });
 
