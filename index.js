@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
       userId: userId,
       fcmToken: u.fcmToken,
       agent: u.agent,
-      ip: ip,
+      ip: u.ip,
       city: u.city,
       country: u.country,
       isp: u.isp
@@ -179,7 +179,7 @@ io.on("connection", (socket) => {
           userId: userId,
           fcmToken: u.fcmToken,
           agent: u.agent,
-          ip: ip,
+          ip: u.ip,
           city: u.city,
           country: u.country,
           isp: u.isp
